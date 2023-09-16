@@ -2,10 +2,9 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-public class Main {
-    public static void main(String[] args) {
-        int port = 12345;
-        System.out.println("Starting server...");
+public class TCPServer {
+    private final int port = 12345;
+    public void TCPServer () {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             System.out.println("Servidor TCP aguardando conexões na porta");
             while(true) {
