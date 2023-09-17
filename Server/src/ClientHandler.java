@@ -21,7 +21,12 @@ public class ClientHandler implements Runnable {
                 System.out.println("Mensagem do Cliente: " + message);
                 if(message.trim().toLowerCase().contains("arquivo")) {
                     System.out.println("Cliente esta requisitando um arquivo");
-                    findFile(message.substring(7).trim());
+                    if(findFile(message.substring(7).trim())){
+                        System.out.println("Enviando Arquivo para Cliente");
+                    }
+                    else {
+                        out.println("ERRO: Arquivo não encontrado");
+                    }
 
                 }
                 message = in.readLine();
@@ -42,21 +47,26 @@ public class ClientHandler implements Runnable {
     public void stop() {
         this.exit = true;
     }
-    public void findFile(String path) {
+    public boolean findFile(String path) {
         String currentPath = System.getProperty("user.dir");
         System.out.println("Diretorio atual do processo:: " + currentPath);
         String [] fileParams = path.split("\\.");
+        if(fileParams.length <= 1) {
+            System.out.println("Formato da string do arquivo errado");
+        }
         File dir = new File(currentPath);
         FileFinder ff = new FileFinder(fileParams[0],fileParams[1]);
         String [] arr = dir.list(ff);
 
         if(arr == null || arr.length == 0) {
             System.out.println("Arquivo não encontrado no diretorio " + currentPath);
+            return false;
         }
         else {
             for (String s : arr) {
                 System.out.println(s + " encontrado.");
             }
+            return true;
 
         }
     }
