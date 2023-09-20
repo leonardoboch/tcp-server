@@ -1,37 +1,54 @@
 import java.io.*;
 import java.net.Socket;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.SQLOutput;
 
 public class ClientHandler implements Runnable {
+    private PrintWriter  out = null;
+    private BufferedReader in = null;
     private Socket clientSocket = null;
     private boolean exit = false;
-    public ClientHandler(Socket socket) {
-        this.clientSocket = socket;
+
+    public ClientHandler(Socket socket) throws IOException {
+        try {
+            this.clientSocket = socket;
+            this.out = new PrintWriter(clientSocket.getOutputStream(), true);
+            this.in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
     @Override
     public void run() {
         try{
-            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
             out.println("Bem vindo ao servidor! Digite suas mensagens:");
-            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             String message = in.readLine();
             while(message != null && !message.equals("sair")){
                 System.out.println("Mensagem do Cliente: " + message);
                 if(message.trim().toLowerCase().contains("arquivo")) {
                     System.out.println("Cliente esta requisitando um arquivo");
-                    if(findFile(message.substring(7).trim())){
-                        System.out.println("Enviando Arquivo para Cliente");
-                    }
-                    else {
-                        out.println("ERRO: Arquivo não encontrado");
+                    File file = findFile(message.substring(7).trim());
+                    if(file != null) {
+                        System.out.println("Calculando Hash");
+                        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                        byte[] hash = digest.digest(Files.readAllBytes(file.toPath()));
+                        out.println("Hash SHA-256 do Arquivo:");
+                        out.println(bytesToHex(hash));
+                        sendFile(file);
+
                     }
 
                 }
                 message = in.readLine();
             }
             System.out.println("Conexão com o cliente encerrada.");
+            out.close();
+            in.close();
             this.clientSocket.close();
             this.stop();
 
@@ -40,6 +57,8 @@ public class ClientHandler implements Runnable {
 
         }catch (IOException e) {
             e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
         }
 
     }
@@ -47,12 +66,13 @@ public class ClientHandler implements Runnable {
     public void stop() {
         this.exit = true;
     }
-    public boolean findFile(String path) {
+    public File findFile(String path) {
         String currentPath = System.getProperty("user.dir");
         System.out.println("Diretorio atual do processo:: " + currentPath);
         String [] fileParams = path.split("\\.");
         if(fileParams.length <= 1) {
             System.out.println("Formato da string do arquivo errado");
+            out.println("Formato da string do arquivo errado, o formato deve ser Nome.ext");
         }
         File dir = new File(currentPath);
         FileFinder ff = new FileFinder(fileParams[0],fileParams[1]);
@@ -60,14 +80,39 @@ public class ClientHandler implements Runnable {
 
         if(arr == null || arr.length == 0) {
             System.out.println("Arquivo não encontrado no diretorio " + currentPath);
-            return false;
+            out.println("Arquivo Não Encontrado !");
+            return null;
         }
         else {
             for (String s : arr) {
                 System.out.println(s + " encontrado.");
+                out.println("Arquivo Encontrado !");
             }
-            return true;
+            return new File(currentPath + "/" + path);
 
+        }
+    }
+
+    private String bytesToHex(byte[] bytes) {
+        StringBuilder result = new StringBuilder();
+        for (byte b : bytes) {
+            result.append(String.format("%02x", b));
+        }
+        return result.toString();
+    }
+    private void sendFile(File file) throws IOException {
+        try {
+            FileInputStream fileInputStream = new FileInputStream(file);
+            BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(clientSocket.getOutputStream());
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = fileInputStream.read(buffer)) != -1) {
+                bufferedOutputStream.write(buffer, 0, bytesRead);
+            }
+            bufferedOutputStream.flush();
+            System.out.println("Arquivo enviado para o cliente.");
+        }catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }
