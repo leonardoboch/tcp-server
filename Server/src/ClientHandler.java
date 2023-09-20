@@ -37,8 +37,14 @@ public class ClientHandler implements Runnable {
                         System.out.println("Calculando Hash");
                         MessageDigest digest = MessageDigest.getInstance("SHA-256");
                         byte[] hash = digest.digest(Files.readAllBytes(file.toPath()));
-                        out.println("Hash SHA-256 do Arquivo:");
-                        out.println(bytesToHex(hash));
+                        out.println("Status: OK!");
+                        out.println("Nome do Arquivo: " + file.getName());
+                        out.println("Tamanho do Arquivo em bytes: " + file.length());
+                        long kbytes = file.length() /1024;
+                        out.println("Tamanho do Arquivo em Kbytes: " + kbytes);
+                        long mbytes = kbytes / 1024;
+                        out.println("Tamanho do Arquivo em Mbytes: " + mbytes);
+                        out.println("Hash SHA-256 do Arquivo: " + bytesToHex(hash));
                         sendFile(file);
 
                     }
@@ -80,13 +86,13 @@ public class ClientHandler implements Runnable {
 
         if(arr == null || arr.length == 0) {
             System.out.println("Arquivo não encontrado no diretorio " + currentPath);
+            out.println("Status: NOT FOUND!");
             out.println("Arquivo Não Encontrado !");
             return null;
         }
         else {
             for (String s : arr) {
                 System.out.println(s + " encontrado.");
-                out.println("Arquivo Encontrado !");
             }
             return new File(currentPath + "/" + path);
 

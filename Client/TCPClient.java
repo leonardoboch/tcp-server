@@ -7,11 +7,12 @@ import java.util.stream.Stream;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class TCPClient {
+    private static Socket socket = null;
     public static void main(String[] args) {
         String serverAddress = "127.0.0.1"; // Endereço IP do servidor localhost
         int serverPort = 12345; // Porta do servidor
         Scanner scanner = new Scanner(System.in);
-        Socket socket = null;
+        
         
         try {
             socket = new Socket(serverAddress, serverPort);
@@ -24,7 +25,10 @@ public class TCPClient {
                     String serverMessage;
                     while(((serverMessage = in.readLine()) != null)) {
                         System.out.println(serverMessage);
-                        
+                        if(serverMessage.startsWith("Hash SHA-256 do Arquivo:")) {
+                            saveFile(socket.getInputStream(), "arquivo.txt");
+                            break;
+                        }
                     }
 
                 }catch(IOException e) {
@@ -37,12 +41,23 @@ public class TCPClient {
                 clientMessage = scanner.nextLine();
                 out.println(clientMessage);
             }
-            in.close();
-            out.close();
             readerThread.shutdownNow();
             socket.close();
+            out.close();
+            in.close();
             
-            
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    private static void saveFile(InputStream inputStream, String fileName) {
+        try (FileOutputStream fileOutputStream = new FileOutputStream(fileName)) {
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                fileOutputStream.write(buffer, 0, bytesRead);
+            }
+            fileOutputStream.flush();
         } catch (IOException e) {
             e.printStackTrace();
         }
